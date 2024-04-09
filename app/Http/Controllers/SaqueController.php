@@ -20,25 +20,18 @@ class SaqueController extends Controller
 
     public function gerarSaque(Request $request)
     {
-        $uuidEmpresa = '559bd72a-c4f9-4b34-84b5-9508cedfdcc3';
-        $pixKey = '9b9aa5a1-3d1c-4590-a807-0e180172789b';
 
-        $loginData = collect($this->loginService->login([
-            'username' => '16511462765',
-            'password' => 'Cartos@123'
-        ], $uuidEmpresa));
-
-        $token = $loginData->get('response')->get('token');
+        $token = $this->login();
 
         $dataQrCode = [
-            'receiverKey' => $pixKey,
+            'receiverKey' => env('CONTA_PIX_KEY'),
             'merchantCity' => 'Porto Alegre',
             'value' => $request->valor,
-            'txId' => 'gimenez99999',
-            'additionalInfo' => $request->mensagem
+            'txId' => substr(md5(uniqid()), 0, 25),
+            'additionalInfo' => $request->mensagem ?? ""
         ];
 
-        $responseData = collect($this->areaPixService->sendPixStatic($token, $dataQrCode));
+        $responseData = collect($this->areaPixService->gerarQrCodeStatic($token, $dataQrCode));
         if ($responseData->get('status') != 200) {
             return response([
                 'sucesso' => false,
@@ -56,15 +49,10 @@ class SaqueController extends Controller
 
     public function getExtrato(Request $request)
     {
-        $uuidEmpresa = '559bd72a-c4f9-4b34-84b5-9508cedfdcc3';
-        $loginData = collect($this->loginService->login([
-            'username' => '16511462765',
-            'password' => 'Cartos@123'
-        ], $uuidEmpresa));
 
-        $token = $loginData->get('response')->get('token');
-        $accountId = 'cea1078c-899d-4db8-bd90-6007e0688e2b';
-        $uuidEmpresa = '559bd72a-c4f9-4b34-84b5-9508cedfdcc3';
+        $token = $this->login();
+        $accountId = env('CONTA_ACCOUNT');
+        $uuidEmpresa = env('BANCO_UUID_EMPRESA');
 
         $responseData = collect($this->areaPixService->getExtrato($token, $uuidEmpresa, $accountId));
         if ($responseData->get('status') != 200) {
@@ -79,6 +67,19 @@ class SaqueController extends Controller
             'mensagem' => 'extrato gerado com sucesso',
             'data' => $responseData->get('response')
         ], 200);
+
     }
 
+    private function login()
+    {
+        $uuidEmpresa = env('BANCO_UUID_EMPRESA');
+        $pixKey = env('CONTA_PIX_KEY');
+
+        $loginData = collect($this->loginService->loginBank([
+            'username' => env('CONTA_USER_DOCUMENT'),
+            'password' => env('CONTA_USER_PASSWORD')
+        ], $uuidEmpresa));
+
+        return $loginData->get('response')->get('token');
+    }
 }

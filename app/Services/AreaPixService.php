@@ -14,7 +14,7 @@ class AreaPixService
         $this->loginService = $loginService;
     }
 
-    public function sendPixStatic($token, $pixData)
+    public function gerarQrCodeStatic($token, $pixData)
     {
         $url = env('CARTOS_BASE_URL') . '/digital-account/v1/pix-static-qrcodes';
         $apiKey = env('CARTOS_API_KEY');
@@ -41,9 +41,37 @@ class AreaPixService
         }
     }
 
+    public function gerarQrCodeDinamic($token, $pixData)
+    {
+
+        $url = env('CARTOS_BASE_URL') . '/digital-account/v1/pix-dynamic-qrcodes';
+        $apiKey = env('CARTOS_API_KEY');
+        $deviceId = 'default';
+
+        try {
+
+            $response = Http::withHeaders([
+                'x-api-key' => $apiKey,
+                'device_id' => $deviceId,
+                'Authorization' => 'Bearer ' . $token
+            ])->post($url, $pixData);
+
+            return [
+                'status' => $response->status(),
+                'response' => collect(json_decode($response->body())),
+            ];
+
+        } catch (Exception $e) {
+            return [
+                'status' => 400,
+                'response' => 'Falha na comunicação com o servidor externo'
+            ];
+        }
+    }
+
     public function getExtrato($token, $uuidEmpresa, $accountId)
     {
-        $url = 'https://transacaohub-dev.beasabank.com.br/extrato/v1/busca/15/cea1078c-899d-4db8-bd90-6007e0688e2b';
+        $url = 'https://transacaohub-dev.beasabank.com.br/extrato/v1/busca/15/' . $accountId;
 
         try {
 
